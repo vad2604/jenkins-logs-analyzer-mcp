@@ -74,9 +74,9 @@ java -jar dist/jenkins-analyzer-mcp.jar
 
 Используется **HTTP Basic** (логин + API token Jenkins). После изменения переменных **перезапустите** MCP-сервер (процесс `java`).
 
-## Подключение в Cursor (MCP)
+## Подключение MCP
 
-1. Откройте настройки MCP (JSON), путь зависит от версии Cursor; часто это файл конфигурации MCP в профиле пользователя.
+1. Откройте настройки MCP (JSON); часто это файл конфигурации MCP в профиле пользователя.
 2. Укажите **абсолютный путь** к **`dist/jenkins-analyzer-mcp.jar`** и при необходимости переменные окружения.
 
 Пример конфигурации:
@@ -88,7 +88,7 @@ java -jar dist/jenkins-analyzer-mcp.jar
       "command": "java",
       "args": [
         "-jar",
-        "/ABSOLUTE/PATH/TO/onecoll-jenkins-analyzer/dist/jenkins-analyzer-mcp.jar"
+        "/ABSOLUTE/PATH/TO/jenkins-analyzer-mcp/dist/jenkins-analyzer-mcp.jar"
       ],
       "env": {
         "JENKINS_USER": "your-jenkins-login",
@@ -101,10 +101,6 @@ java -jar dist/jenkins-analyzer-mcp.jar
 ```
 
 Замените `ABSOLUTE/PATH/TO/...` на реальные пути на машине коллеги. **`LOG_FILE` не задавайте**, если файл лога не нужен — тогда логи только в **stderr** (файл на диске не создаётся).
-
-### Другие клиенты (Claude Desktop, VS Code и т.д.)
-
-Принцип тот же: **command** = `java`, **args** = `-jar` + путь к jar, **env** = переменные Jenkins. Для stdio MCP клиент должен **запускать процесс**, а не открывать URL.
 
 ## Формат URL Jenkins
 
