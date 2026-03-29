@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: onecoll-jenkins-analyzer
+  main:
+    web-application-type: none
+    banner-mode: "off"
+  ai:
+    mcp:
+      server:
+        name: onecoll-jenkins-analyzer
+        version: 0.3.0
+        type: SYNC
+        stdio: true
+        # High-level instructions for the host LLM (shown in MCP server metadata where supported).
+        instructions: |
+          Jenkins console-log MCP server — CI triage only; root-cause analysis in source code stays with you.
+
+          ## Triage matrix (recommended order)
+          1) get_logs_tail — fastest: last N lines when failure is usually at the end.
+          2) get_error_lines_with_context — full log is loaded and scanned for heuristic error lines; cap hits with maxErrorMatches; check totalErrorMatches vs returnedErrorMatches.
+          3) grep_in_logs — full log scan for a known substring or (useRegex=true) Java regex; cap with maxMatches; check totalGrepMatches vs returnedGrepMatches.
+          4) get_full_logs — last resort for very large payloads: only this tool truncates the returned line list via maxLogLines or scanWholeLog=true.
+
+          Note: steps 2 and 3 always scan the entire log in memory; they do not use maxLogLines. Limits apply to how many matches are returned, not how much of the log is read.
+
+          ## Response envelope (every tool)
+          Success: success=true and data=typed payload.
+          Failure: success=false; read errorCode, agentMessage, technicalDetail, remediation (and fix arguments or Jenkins access before retrying).
+
+          ## Auth
+          HTTP Basic for Jenkins is never passed in tool arguments. Set JENKINS_USER or JENKINS_USERNAME and JENKINS_TOKEN or JENKINS_API_TOKEN on the MCP server process; restart after changes.
+
+          ## Line length in responses
+          Long lines are truncated for display (suffix "... [truncated]"). Limit: analyzer.log-line-max-chars or env ANALYZER_LOG_LINE_MAX_CHARS (default 200). Search still uses full lines in memory.
+
+          ## Cache
+          Completed builds may be cached under analyzer.log-cache.dir. Use get_log_cache_stats to inspect; clear_log_cache deletes cached *.log files (next fetch re-downloads from Jenkins).
+
+          ## Jenkins JSON API (no HTML)
+          describe_jenkins_job_or_build resolves /job/... URLs to job name, optional build number, result status, branch (API or multibranch path heuristic).
+          list_jenkins_job_builds returns recent builds for a job (limit 1..100). Same Basic auth env as log tools.
+
+# File logging: set logging.file.name or env LOG_FILE; if unset, only stderr (no log file).
+
+analyzer:
+  # Max characters per log line in tool responses; override with env ANALYZER_LOG_LINE_MAX_CHARS
+  log-line-max-chars: 200
+  log-cache:
+    dir: .cache/jenkins-logs
+    ttl: 7d
+    max-size-bytes: 262144000
