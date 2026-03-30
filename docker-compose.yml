@@ -1,0 +1,19 @@
+# Optional helper: build image and run with env from shell or .env file.
+# For Cursor MCP over stdio, prefer `docker run -i` (see README); compose is mainly for local checks.
+
+services:
+  jenkins-analyzer-mcp:
+    build: .
+    image: jenkins-analyzer-mcp:local
+    stdin_open: true
+    tty: false
+    environment:
+      JENKINS_USER: ${JENKINS_USER:-}
+      JENKINS_TOKEN: ${JENKINS_TOKEN:-}
+      LOG_FILE: ${LOG_FILE:-}
+    # Persist Jenkins console cache between runs (optional)
+    volumes:
+      - jenkins-mcp-log-cache:/home/mcp/.cache
+
+volumes:
+  jenkins-mcp-log-cache:

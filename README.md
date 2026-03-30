@@ -29,8 +29,9 @@ MCP-сервер на **Java / Spring Boot** для работы с **консо
 
 ## Требования
 
-- **JDK 21+** (`java -version`)
-- Для сборки: **Maven 3.9+**
+- **JDK 21+** (`java -version`) — для локального запуска jar и сборки Maven
+- **Maven 3.9+** — для `mvn package` на хосте (или только **Docker** — сборка внутри образа)
+- **Docker** (опционально) — для запуска из контейнера
 - Доступ к Jenkins по сети (VPN при необходимости)
 - Учётная запись Jenkins с правом читать нужные job/build
 
@@ -72,14 +73,60 @@ java -jar dist/jenkins-analyzer-mcp.jar
 | `JENKINS_USER` | `JENKINS_USERNAME` |
 | `JENKINS_TOKEN` | `JENKINS_API_TOKEN` |
 
-Используется **HTTP Basic** (логин + API token Jenkins). После изменения переменных **перезапустите** MCP-сервер (процесс `java`).
+Используется **HTTP Basic** (логин + API token Jenkins). После изменения переменных **перезапустите** MCP-сервер (процесс `java` или контейнер Docker).
+
+## Запуск в Docker
+
+Нужен **Docker Engine** (Docker Desktop / Docker CE). Образ собирает fat-jar внутри контейнера и запускает **тот же** процесс MCP по stdio (порт **не** слушается).
+
+### Сборка образа
+
+Из корня репозитория:
+
+```bash
+docker build -t jenkins-analyzer-mcp .
+```
+
+### Проверка вручную (stdio)
+
+Флаг **`-i`** обязателен: MCP обменивается данными по stdin/stdout.
+
+```bash
+docker run -i --rm \
+  -e JENKINS_USER='your-user' \
+  -e JENKINS_TOKEN='your-api-token' \
+  jenkins-analyzer-mcp
+```
+
+### Jenkins в сети Docker
+
+- Если Jenkins доступен по обычному URL из интернета или корпоративной сети — дополнительных ничего не нужно.
+
+- Если Jenkins на **хосте** (`localhost` в браузере), с контейнера `localhost` — это сам контейнер. На **Linux** удобно добавить:
+
+  `--add-host=host.docker.internal:host-gateway`
+
+  и в URL инструментов использовать хост, например `https://host.docker.internal:8080/...` (порт подставьте свой). На **Docker Desktop** (macOS/Windows) имя `host.docker.internal` обычно уже есть.
+
+### docker compose (опционально)
+
+В репозитории есть **`docker-compose.yml`**: сборка образа и том для кэша логов Jenkins (`~/.cache` внутри контейнера). Для проверки:
+
+```bash
+export JENKINS_USER='your-user'
+export JENKINS_TOKEN='your-api-token'
+docker compose build
+docker compose run --rm -i jenkins-analyzer-mcp
+```
+
+Для **stdio MCP** в IDE надёжнее вызывать **`docker run -i`** (как ниже), а не долгоживущий `compose up`.
 
 ## Подключение MCP
 
 1. Откройте настройки MCP (JSON); часто это файл конфигурации MCP в профиле пользователя.
 2. Укажите **абсолютный путь** к **`dist/jenkins-analyzer-mcp.jar`** и при необходимости переменные окружения.
 
-Пример конфигурации:
+### Вариант: локальный `java -jar`
 
 ```json
 {
@@ -101,6 +148,40 @@ java -jar dist/jenkins-analyzer-mcp.jar
 ```
 
 Замените `ABSOLUTE/PATH/TO/...` на реальные пути на машине коллеги. **`LOG_FILE` не задавайте**, если файл лога не нужен — тогда логи только в **stderr** (файл на диске не создаётся).
+
+### Вариант: Docker
+
+Сначала соберите образ (`docker build -t jenkins-analyzer-mcp .`). В конфиге MCP передаёте **`docker run -i`** (интерактивный stdin), **`--rm`**, переменные Jenkins и имя образа. Значения `JENKINS_*` из блока `env` попадают в процесс `docker` и подставляются в контейнер через `-e`.
+
+```json
+{
+  "mcpServers": {
+    "jenkins-analyzer": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "JENKINS_USER",
+        "-e",
+        "JENKINS_TOKEN",
+        "jenkins-analyzer-mcp:latest"
+      ],
+      "env": {
+        "JENKINS_USER": "your-jenkins-login",
+        "JENKINS_TOKEN": "your-jenkins-api-token"
+      }
+    }
+  }
+}
+```
+
+При необходимости добавьте в `args` после `"--rm"` (на Linux, Jenkins на хосте): `"--add-host", "host.docker.internal:host-gateway"`.
+
+### Другие клиенты (Claude Desktop, VS Code и т.д.)
+
+Принцип тот же: **command** = `java` + `-jar` + путь к jar, либо **`docker`** + **`run -i`** + образ, **env** = переменные Jenkins. Для stdio MCP клиент должен **запускать процесс** с привязанным stdin/stdout, а не открывать URL.
 
 ## Формат URL Jenkins
 
