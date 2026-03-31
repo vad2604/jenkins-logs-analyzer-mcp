@@ -40,9 +40,13 @@ spring:
           describe_jenkins_job_or_build resolves /job/... URLs to job name, optional build number, result status, branch (API or multibranch path heuristic).
           list_jenkins_job_builds returns recent builds for a job (limit 1..100). Same Basic auth env as log tools.
 
-# File logging: set logging.file.name or env LOG_FILE; if unset, only stderr (no log file).
+# Logging for stdio MCP:
+# - analyzer.log-to-stderr=false (default): no console logs at all (max compatibility with strict clients)
+# - analyzer.log-to-stderr=true: logs to stderr
+# - logging.file.name / LOG_FILE: optional file logging
 
 analyzer:
+  log-to-stderr: false
   # Max characters per log line in tool responses; override with env ANALYZER_LOG_LINE_MAX_CHARS
   log-line-max-chars: 200
   log-cache:

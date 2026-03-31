@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- MCP stdio: never write logs to stdout. Stderr always; file only when logging.file.name / env LOG_FILE is set. -->
+    <!-- MCP stdio: never write logs to stdout. -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
     <springProperty name="LOG_FILE" source="logging.file.name" defaultValue=""/>
-
-    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.err</target>
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
+    <springProperty name="LOG_TO_STDERR" source="analyzer.log-to-stderr" defaultValue="false"/>
 
     <if condition='property("LOG_FILE") != null &amp;&amp; !property("LOG_FILE").isEmpty()'>
         <then>
@@ -25,15 +20,43 @@
                 </encoder>
             </appender>
 
-            <root level="INFO">
-                <appender-ref ref="STDERR"/>
-                <appender-ref ref="FILE"/>
-            </root>
+            <if condition='property("LOG_TO_STDERR").equalsIgnoreCase("true")'>
+                <then>
+                    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+                        <target>System.err</target>
+                        <encoder>
+                            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+                        </encoder>
+                    </appender>
+                    <root level="INFO">
+                        <appender-ref ref="STDERR"/>
+                        <appender-ref ref="FILE"/>
+                    </root>
+                </then>
+                <else>
+                    <root level="INFO">
+                        <appender-ref ref="FILE"/>
+                    </root>
+                </else>
+            </if>
         </then>
         <else>
-            <root level="INFO">
-                <appender-ref ref="STDERR"/>
-            </root>
+            <if condition='property("LOG_TO_STDERR").equalsIgnoreCase("true")'>
+                <then>
+                    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+                        <target>System.err</target>
+                        <encoder>
+                            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+                        </encoder>
+                    </appender>
+                    <root level="INFO">
+                        <appender-ref ref="STDERR"/>
+                    </root>
+                </then>
+                <else>
+                    <root level="OFF"/>
+                </else>
+            </if>
         </else>
     </if>
 </configuration>
